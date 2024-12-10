@@ -1,11 +1,12 @@
 import streamlit as st
 import pyvista as pv
 from stpyvista import stpyvista
-from stpyvista.utils import start_xvfb
+from stpyvista.utils import is_the_app_embedded, start_xvfb
 import numpy as np
 import os
 import time
 
+start_xvfb()
 
 
 # Function to save uploaded files
