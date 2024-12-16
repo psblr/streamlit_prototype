@@ -1,6 +1,6 @@
 # streamlit_prototype
 
-hosted with streamlit
+hosted with streamlit at (https://cadgenerator3000.streamlit.app/)
 
 # run locally
 
