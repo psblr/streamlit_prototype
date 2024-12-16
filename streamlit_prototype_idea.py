@@ -1,7 +1,7 @@
 import streamlit as st
 import pyvista as pv
 from stpyvista import stpyvista
-from stpyvista.utils import is_the_app_embedded, start_xvfb
+from stpyvista.utils import start_xvfb
 import numpy as np
 import os
 import time
@@ -50,6 +50,93 @@ def retrieve_and_generate_response(query, document_paths):
     response = f"Generated a response for '{query}' using {len(document_paths)} document(s)."
     return response
 
+def exec_button(model_description, message="Generating your CAD model..."):
+    if model_description.strip():
+        with st.spinner(message):
+            time.sleep(2)
+            stl_binary_file_path = generate_stl_file(
+                model_name=model_description + "_binary",
+                binary=True
+            )
+            stl_ascii_file_path = generate_stl_file(
+                model_name=model_description + "_ascii",
+                binary=False
+            )
+
+            view_model_path = "utah_teapot.stl"
+            st.success(f"Model '{model_description}' generated successfully!")
+            
+            st.subheader("3D CAD Model Visualization")
+            mesh = pv.read(view_model_path)
+            # Scale the mesh down (adjust the factor as needed)
+            scale_factor = 0.1
+            mesh.scale([scale_factor, scale_factor, scale_factor])  # Apply uniform scaling
+            
+            # Center the mesh by shifting it to the origin
+            center = np.array(mesh.center) 
+            mesh.translate(-center)  # Translate so the center is at (0, 0, 0)
+            
+            # Normalize the mesh to fit within a unit cube (optional, for extreme cases)
+            bounds = mesh.bounds
+            max_dimension = max(bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4])
+            mesh.scale([1.0 / max_dimension] * 3)  # Scale to fit into a unit box
+            
+            # Add a scalar field (optional, for visualization)
+            mesh["Height"] = mesh.points[:, 2]  # Use Z-coordinates as scalar values
+
+            # Visualize the mesh with PyVista
+            plotter = pv.Plotter(window_size=[600, 400])
+            plotter.add_mesh(mesh, scalars="Height", cmap="coolwarm", show_edges=True)
+            plotter.show_axes()
+            
+
+            # Explicitly adjust the camera
+            bounds = mesh.bounds  # Get mesh bounds: (xmin, xmax, ymin, ymax, zmin, zmax)
+            x_range = bounds[1] - bounds[0]
+            y_range = bounds[3] - bounds[2]
+            z_range = bounds[5] - bounds[4]
+
+            # Compute the diagonal size of the bounding box for a better zoom level
+            diagonal = np.sqrt(x_range**2 + y_range**2 + z_range**2)
+            
+            # Set the camera position relative to the center
+            plotter.camera_position = [
+                (center[0] + 2 * diagonal, center[1] + 2 * diagonal, center[2] + 2 * diagonal),  # Camera location
+                (center[0], center[1], center[2]),  # Focal point (center of the mesh)
+                (0, 0, 1)  # View up direction
+            ]
+
+            # Reset the camera to update the view
+            plotter.reset_camera()
+
+
+            stpyvista(plotter)  # Display the 3D model in Streamlit
+            st.subheader("Model description")
+            st.write("""
+                A Teapot has been generated. It is green. Your description was ignored.
+            """)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                with open(stl_binary_file_path, "rb") as stl_file:
+                    st.download_button(
+                        label="Download binary STL File",
+                        data=stl_file,
+                        file_name=os.path.basename(stl_binary_file_path),
+                        mime="application/vnd.ms-pki.stl",
+                    )
+
+            with col2:
+                with open(stl_ascii_file_path, "rb") as stl_file:
+                    st.download_button(
+                        label="Download ASCII STL File",
+                        data=stl_file,
+                        file_name=os.path.basename(stl_ascii_file_path),
+                        mime="application/vnd.ms-pki.stl",
+                    )
+    else:
+        st.error("Please provide a description of the model.")
+
 def main():
     
 
@@ -57,12 +144,9 @@ def main():
     st.title("CAD Generater 3000")
     st.subheader("Upload documents and describe your CAD model requirements.")
 
-    # Section: STL Format Selection
-    st.sidebar.header("STL File Format")
-    binary_stl = st.sidebar.radio(
-        "Select STL file format:",
-        ("Binary", "Human-readable (ASCII)")
-    )
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Select a page:", ["Generate STL", "Refine .STL file"])
+
 
     # Section: File Upload
     st.sidebar.header("Upload Relevant Documents")
@@ -75,47 +159,30 @@ def main():
         saved_file_paths = [save_uploaded_file(f) for f in uploaded_files]
         print(saved_file_paths)
 
-    # Section: CAD Model Description and Generation
-    st.header("Generate CAD Models in .STL Format")
-    model_description = st.text_input("Describe the CAD model you need:")
+    
+    if page == "Generate STL":
+        # Section: CAD Model Description and Generation
+        st.header("Generate CAD Models in .STL Format")
+        model_description = st.text_input("Describe the CAD model you need:")
 
-    if st.button("Generate Model"):
-        if model_description.strip():
-            with st.spinner("Generating your CAD model..."):
-                time.sleep(2)
-                stl_file_path = generate_stl_file(
-                    model_name=model_description,
-                    binary=(binary_stl == "Binary")
-                )
-                st.success(f"Model '{model_description}' generated successfully!")
-                
-                st.subheader("3D CAD Model Visualization")
-                mesh = pv.read(stl_file_path)
-                ## Add some scalar field associated to the mesh
+        if st.button("Generate Model"):
+            exec_button(model_description)
+            
+    elif page == "Refine .STL file":
+        st.header("Refine Existing .STL Files")
+        model_description = st.text_input("Describe the refinements:")
 
-                plotter = pv.Plotter(window_size=[400, 400])
-                plotter.add_mesh(mesh, color="green")
-                plotter.show_axes()
-                stpyvista(plotter)  # Display the 3D model in Streamlit
+        uploaded_files = st.file_uploader(
+        "Upload .stl file", accept_multiple_files=True
+        )
 
-                st.subheader("Model description")
-                st.write("""
-                    A Cube has been generated. It is green. Your description was ignored.
-                """)
+        if uploaded_files:
+            st.sidebar.success(f"{len(uploaded_files)} file(s) uploaded.")
+            saved_file_paths = [save_uploaded_file(f) for f in uploaded_files]
 
+        if st.button("Refine Model"):
+            exec_button(model_description, message="Refining your CAD model...")
 
-                with open(stl_file_path, "rb") as stl_file:
-                    st.download_button(
-                        label="Download STL File",
-                        data=stl_file,
-                        file_name=os.path.basename(stl_file_path),
-                        mime="application/vnd.ms-pki.stl",
-                    )
-        else:
-            st.error("Please provide a description of the model.")
 
 if __name__ == "__main__":
-    if "IS_XVFB_RUNNING" not in st.session_state:
-        start_xvfb()
-        st.session_state.IS_XVFB_RUNNING = True 
     main()
