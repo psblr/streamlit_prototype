@@ -13,5 +13,3 @@ trame-components
 trame-server
 trame-vtk
 trame-vuetify
-libgl1-mesa-glx
-xvfb
