@@ -2,7 +2,7 @@
 
 hosted with streamlit at (https://cadgenerator3000.streamlit.app/)
 
-To wake up the app, wait a few seconds. Even if there is an error message, it should start after while.
+To wake up the app, wait a few seconds. Even if there is an error message, it should start after a while.
 
 else....
 
