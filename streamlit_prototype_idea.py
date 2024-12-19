@@ -17,7 +17,7 @@ def save_uploaded_file(uploaded_file, save_dir="uploaded_files"):
         f.write(uploaded_file.getbuffer())
     return save_path
 
-# Function to generate STL file (supports binary and ASCII)
+# Function to Generate .stl file file (supports binary and ASCII)
 def generate_stl_file(model_name, binary=True):
     filename = f"{model_name}.stl"
     filepath = os.path.join("output", filename)
@@ -113,7 +113,7 @@ def exec_button(model_description, message="Generating your CAD model..."):
             stpyvista(plotter)  # Display the 3D model in Streamlit
             st.subheader("Model description")
             st.write("""
-                A Teapot has been generated. It is green. Your description was ignored.
+                As this is just a protoype, your description was ignored and A Teapot has been generated.
             """)
 
             col1, col2 = st.columns(2)
@@ -142,16 +142,19 @@ def main():
 
     # Streamlit Interface
     st.title("CAD Generater 3000")
-    st.subheader("Upload documents and describe your CAD model requirements.")
+    st.text("This is a clickable prototype for a CAD Engineering assistant. The current functionality is limited to generating a demo .stl file in ASCII and binary format.")
+    st.text("In the final version, you will be able to create ASCII and binary CAD files based on your custom prompt or refine existing .stl files.")
 
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Select a page:", ["Generate STL", "Refine .STL file"])
+    st.sidebar.title("")
+    page = st.sidebar.radio("What do you want to do?:", ["Generate .stl file", "Refine .stl file"])
 
 
     # Section: File Upload
     st.sidebar.header("Upload Relevant Documents")
     uploaded_files = st.sidebar.file_uploader(
-        "Upload documents (PDF, DOCX, etc.)", accept_multiple_files=True
+        "Upload documents (PDF, DOCX, etc.)", 
+        accept_multiple_files=True,
+        help="Upload documents to provide context for the CAD model generation. This could be existing .stl files of company-internal designs or other relevant documents."
     )
 
     if uploaded_files:
@@ -160,21 +163,26 @@ def main():
         print(saved_file_paths)
 
     
-    if page == "Generate STL":
+    if page == "Generate .stl file":
         # Section: CAD Model Description and Generation
         st.header("Generate CAD Models in .STL Format")
-        model_description = st.text_input("Describe the CAD model you need:")
+        st.text("Upload documents and describe your CAD model requirements.")
+        model_description = st.text_input("Describe the CAD model you need:", placeholder="e.g. Teapot with a handle",
+                                          help="Provide a brief description of the CAD model you need.")
 
         if st.button("Generate Model"):
             exec_button(model_description)
             
-    elif page == "Refine .STL file":
-        st.header("Refine Existing .STL Files")
-        model_description = st.text_input("Describe the refinements:")
-
+    elif page == "Refine .stl file":
+        st.header("Refine Existing .stl Files")
         uploaded_files = st.file_uploader(
-        "Upload .stl file", accept_multiple_files=True
+        label="Upload your .stl file", accept_multiple_files=True
         )
+
+        model_description = st.text_input("Describe the refinements:", placeholder="e.g. Remove the handle of the teapot", 
+                                          help="Provide a brief description of the refinements which shall be applied to your uploaded model.")
+
+        
 
         if uploaded_files:
             st.sidebar.success(f"{len(uploaded_files)} file(s) uploaded.")
