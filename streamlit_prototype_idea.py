@@ -69,7 +69,7 @@ def exec_button(model_description, page, message="Generating your CAD model...")
             st.session_state[f'{page}_stl_binary_file_path'] = stl_binary_file_path
             st.session_state[f'{page}_stl_ascii_file_path'] = stl_ascii_file_path
 
-            st.session_state[f'{page}_view_model_path'] = "utah_teapot.stl"  # You can modify this as needed
+            st.session_state[f'{page}_view_model_path'] = "utah_teapot.stl"
 
             st.success(f"Model '{model_description}' generated successfully!")
     else:
