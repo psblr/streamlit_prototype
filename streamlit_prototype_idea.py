@@ -7,7 +7,7 @@ import os
 import time
 
 # Initialize Xvfb for headless environments
-start_xvfb()
+#start_xvfb()
 
 # Function to save uploaded files
 def save_uploaded_file(uploaded_file, save_dir="uploaded_files"):
@@ -124,6 +124,11 @@ def render_plot(view_model_path):
         st.subheader("Model Description")
         st.write("""
             As this is just a prototype, your description was ignored and a Teapot has been generated.
+        """)
+
+        st.subheader("Possible Prompt Improvements")
+        st.write("""
+            AS this is just a prototype, this is just a placeholder for possible prompt improvements. In the final version you will receive recommendations to improve your prompt.
         """)
     except Exception as e:
         st.error(f"An error occurred while rendering the plot: {e}")
