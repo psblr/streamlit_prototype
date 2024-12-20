@@ -161,11 +161,11 @@ def main():
     page = st.sidebar.radio("What do you want to do?:", [GENERATE_PAGE, REFINE_PAGE])
 
     # Section: File Upload for both pages
-    st.sidebar.header("Upload Relevant Documents")
+    st.sidebar.header("Upload Relevant Pictures")
     uploaded_files = st.sidebar.file_uploader(
-        "Upload documents (PDF, DOCX, etc.)", 
+        "Upload relevant pictures (.jpg, .png, .svg)", 
         accept_multiple_files=True,
-        help="Upload documents to provide context for the CAD model generation. This could be existing .stl files of company-internal designs or other relevant documents."
+        help="Upload pictures to provide context for the CAD model generation. This could be pictures of company-internal designs or other relevant details."
     )
 
     if uploaded_files:
