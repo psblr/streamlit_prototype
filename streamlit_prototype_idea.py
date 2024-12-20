@@ -6,8 +6,8 @@ import numpy as np
 import os
 import time
 
+# Initialize Xvfb for headless environments
 start_xvfb()
-
 
 # Function to save uploaded files
 def save_uploaded_file(uploaded_file, save_dir="uploaded_files"):
@@ -17,7 +17,7 @@ def save_uploaded_file(uploaded_file, save_dir="uploaded_files"):
         f.write(uploaded_file.getbuffer())
     return save_path
 
-# Function to Generate .stl file file (supports binary and ASCII)
+# Function to Generate .stl file (supports binary and ASCII)
 def generate_stl_file(model_name, binary=True):
     filename = f"{model_name}.stl"
     filepath = os.path.join("output", filename)
@@ -50,7 +50,8 @@ def retrieve_and_generate_response(query, document_paths):
     response = f"Generated a response for '{query}' using {len(document_paths)} document(s)."
     return response
 
-def exec_button(model_description, message="Generating your CAD model..."):
+# Function to handle model generation/refinement
+def exec_button(model_description, page, message="Generating your CAD model..."):
     if model_description.strip():
         with st.spinner(message):
             time.sleep(2)
@@ -63,16 +64,19 @@ def exec_button(model_description, message="Generating your CAD model..."):
                 binary=False
             )
 
-            # Update session state
-            st.session_state['model_generated'] = True
-            st.session_state['stl_binary_file_path'] = stl_binary_file_path
-            st.session_state['stl_ascii_file_path'] = stl_ascii_file_path
+            # Update session state based on the current page
+            st.session_state[f'{page}_model_generated'] = True
+            st.session_state[f'{page}_stl_binary_file_path'] = stl_binary_file_path
+            st.session_state[f'{page}_stl_ascii_file_path'] = stl_ascii_file_path
+
+            st.session_state[f'{page}_view_model_path'] = "utah_teapot.stl"  # You can modify this as needed
 
             st.success(f"Model '{model_description}' generated successfully!")
     else:
         st.error("Please provide a description of the model.")
 
-def render_plot(view_model_path="utah_teapot.stl"):
+# Function to render the 3D plot
+def render_plot(view_model_path):
     try:
         st.subheader("3D CAD Model Visualization")
         mesh = pv.read(view_model_path)
@@ -82,7 +86,7 @@ def render_plot(view_model_path="utah_teapot.stl"):
         
         # Center the mesh by shifting it to the origin
         center = np.array(mesh.center) 
-        mesh.translate(-center)  # Translate so the center is at (0, 0, 0)
+        mesh.translate(-center)  # Translate so the center is at (0, 0, 0))
         
         # Normalize the mesh to fit within a unit cube (optional, for extreme cases)
         bounds = mesh.bounds
@@ -117,7 +121,7 @@ def render_plot(view_model_path="utah_teapot.stl"):
         plotter.reset_camera()
 
         stpyvista(plotter)  # Display the 3D model in Streamlit
-        st.subheader("Model description")
+        st.subheader("Model Description")
         st.write("""
             As this is just a prototype, your description was ignored and a Teapot has been generated.
         """)
@@ -125,22 +129,33 @@ def render_plot(view_model_path="utah_teapot.stl"):
         st.error(f"An error occurred while rendering the plot: {e}")
 
 def main():
-    # Initialize session state
-    if 'model_generated' not in st.session_state:
-        st.session_state['model_generated'] = False
-        st.session_state['stl_binary_file_path'] = ''
-        st.session_state['stl_ascii_file_path'] = ''
-        st.session_state['view_model_path'] = 'utah_teapot.stl'  # Default model path
+    # Define page identifiers
+    GENERATE_PAGE = "Generate .stl file"
+    REFINE_PAGE = "Refine .stl file"
+
+    # Initialize session state for Generate page
+    if f'{GENERATE_PAGE}_model_generated' not in st.session_state:
+        st.session_state[f'{GENERATE_PAGE}_model_generated'] = False
+        st.session_state[f'{GENERATE_PAGE}_stl_binary_file_path'] = ''
+        st.session_state[f'{GENERATE_PAGE}_stl_ascii_file_path'] = ''
+        st.session_state[f'{GENERATE_PAGE}_view_model_path'] = 'utah_teapot.stl'  # Default model path
+
+    # Initialize session state for Refine page
+    if f'{REFINE_PAGE}_model_generated' not in st.session_state:
+        st.session_state[f'{REFINE_PAGE}_model_generated'] = False
+        st.session_state[f'{REFINE_PAGE}_stl_binary_file_path'] = ''
+        st.session_state[f'{REFINE_PAGE}_stl_ascii_file_path'] = ''
+        st.session_state[f'{REFINE_PAGE}_view_model_path'] = 'utah_teapot.stl'  # Default model path
 
     # Streamlit Interface
     st.title("CAD Generator 3000")
     st.text("This is a clickable prototype for a CAD Engineering assistant. The current functionality is limited to generating a demo .stl file in ASCII and binary format.")
     st.text("In the final version, you will be able to create ASCII and binary CAD files based on your custom prompt or refine existing .stl files.")
 
-    st.sidebar.title("")
-    page = st.sidebar.radio("What do you want to do?:", ["Generate .stl file", "Refine .stl file"])
+    st.sidebar.title("Options")
+    page = st.sidebar.radio("What do you want to do?:", [GENERATE_PAGE, REFINE_PAGE])
 
-    # Section: File Upload
+    # Section: File Upload for both pages
     st.sidebar.header("Upload Relevant Documents")
     uploaded_files = st.sidebar.file_uploader(
         "Upload documents (PDF, DOCX, etc.)", 
@@ -155,7 +170,14 @@ def main():
     else:
         saved_file_paths = []
 
-    if page == "Generate .stl file":
+    # Handle page switching by resetting other page's session state
+    if page == GENERATE_PAGE:
+        # Reset Refine page state
+        st.session_state[f'{REFINE_PAGE}_model_generated'] = False
+        st.session_state[f'{REFINE_PAGE}_stl_binary_file_path'] = ''
+        st.session_state[f'{REFINE_PAGE}_stl_ascii_file_path'] = ''
+        st.session_state[f'{REFINE_PAGE}_view_model_path'] = 'utah_teapot.stl'
+
         # Section: CAD Model Description and Generation
         st.header("Generate CAD Models in .STL Format")
         st.text("Upload documents and describe your CAD model requirements.")
@@ -166,13 +188,47 @@ def main():
         )
 
         if st.button("Generate Model"):
-            exec_button(model_description)
-            
-    elif page == "Refine .stl file":
-        st.header("Refine Existing .stl Files")
+            exec_button(model_description, page=GENERATE_PAGE)
+
+        # If a model has been generated on the Generate page, display the plot and download buttons
+        if st.session_state[f'{GENERATE_PAGE}_model_generated']:
+            render_plot(st.session_state[f'{GENERATE_PAGE}_view_model_path'])
+
+            # Display download buttons
+            st.subheader("Download STL Files")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.session_state[f'{GENERATE_PAGE}_stl_binary_file_path']:
+                    with open(st.session_state[f'{GENERATE_PAGE}_stl_binary_file_path'], "rb") as stl_file:
+                        st.download_button(
+                            label="Download Binary STL File",
+                            data=stl_file,
+                            file_name=os.path.basename(st.session_state[f'{GENERATE_PAGE}_stl_binary_file_path']),
+                            mime="application/vnd.ms-pki.stl",
+                        )
+            with col2:
+                if st.session_state[f'{GENERATE_PAGE}_stl_ascii_file_path']:
+                    with open(st.session_state[f'{GENERATE_PAGE}_stl_ascii_file_path'], "rb") as stl_file:
+                        st.download_button(
+                            label="Download ASCII STL File",
+                            data=stl_file,
+                            file_name=os.path.basename(st.session_state[f'{GENERATE_PAGE}_stl_ascii_file_path']),
+                            mime="application/vnd.ms-pki.stl",
+                        )
+
+    elif page == REFINE_PAGE:
+        # Reset Generate page state
+        st.session_state[f'{GENERATE_PAGE}_model_generated'] = False
+        st.session_state[f'{GENERATE_PAGE}_stl_binary_file_path'] = ''
+        st.session_state[f'{GENERATE_PAGE}_stl_ascii_file_path'] = ''
+        st.session_state[f'{GENERATE_PAGE}_view_model_path'] = 'utah_teapot.stl'
+
+        # Section: Refining Existing .stl Files
+        st.header("Refine Existing .STL Files")
         refine_uploaded_files = st.file_uploader(
             label="Upload your .stl file", 
-            accept_multiple_files=True
+            accept_multiple_files=True,
+            help="Upload your existing .stl files that you want to refine."
         )
 
         refine_model_description = st.text_input(
@@ -188,34 +244,33 @@ def main():
             saved_refine_file_paths = []
 
         if st.button("Refine Model"):
-            exec_button(refine_model_description, message="Refining your CAD model...")
+            exec_button(refine_model_description, page=REFINE_PAGE, message="Refining your CAD model...")
 
-    # After generation or refinement, check session state to render plot and download buttons
-    if st.session_state['model_generated']:
-        # Render the plot
-        render_plot(st.session_state['view_model_path'])
+        # If a model has been refined on the Refine page, display the plot and download buttons
+        if st.session_state[f'{REFINE_PAGE}_model_generated']:
+            render_plot(st.session_state[f'{REFINE_PAGE}_view_model_path'])
 
-        # Display download buttons
-        st.subheader("Download STL Files")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.session_state['stl_binary_file_path']:
-                with open(st.session_state['stl_binary_file_path'], "rb") as stl_file:
-                    st.download_button(
-                        label="Download Binary STL File",
-                        data=stl_file,
-                        file_name=os.path.basename(st.session_state['stl_binary_file_path']),
-                        mime="application/vnd.ms-pki.stl",
-                    )
-        with col2:
-            if st.session_state['stl_ascii_file_path']:
-                with open(st.session_state['stl_ascii_file_path'], "rb") as stl_file:
-                    st.download_button(
-                        label="Download ASCII STL File",
-                        data=stl_file,
-                        file_name=os.path.basename(st.session_state['stl_ascii_file_path']),
-                        mime="application/vnd.ms-pki.stl",
-                    )
+            # Display download buttons
+            st.subheader("Download Refined STL Files")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.session_state[f'{REFINE_PAGE}_stl_binary_file_path']:
+                    with open(st.session_state[f'{REFINE_PAGE}_stl_binary_file_path'], "rb") as stl_file:
+                        st.download_button(
+                            label="Download Binary STL File",
+                            data=stl_file,
+                            file_name=os.path.basename(st.session_state[f'{REFINE_PAGE}_stl_binary_file_path']),
+                            mime="application/vnd.ms-pki.stl",
+                        )
+            with col2:
+                if st.session_state[f'{REFINE_PAGE}_stl_ascii_file_path']:
+                    with open(st.session_state[f'{REFINE_PAGE}_stl_ascii_file_path'], "rb") as stl_file:
+                        st.download_button(
+                            label="Download ASCII STL File",
+                            data=stl_file,
+                            file_name=os.path.basename(st.session_state[f'{REFINE_PAGE}_stl_ascii_file_path']),
+                            mime="application/vnd.ms-pki.stl",
+                        )
 
 if __name__ == "__main__":
     main()
