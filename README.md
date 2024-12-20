@@ -19,6 +19,9 @@ pip install -r requirements.txt
 ```
 
 ## Run the app locally
+
+To work on windows, ```start_xvfb()``` needs to be removed (or commented out). It is necessary for streamlit hosting.
+
 ```sh
 streamlit run streamlit_prototype_idea.py
 ```
